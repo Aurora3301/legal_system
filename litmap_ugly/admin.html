@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Law Case Research Tool - Admin</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 18px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #1d1d1f;
+        }
+        form {
+            margin-bottom: 30px;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: 500;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #d2d2d7;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 12px 20px;
+            background-color: #0071e3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0077ed;
+        }
+        #caseList, #relationshipList {
+            margin-top: 30px;
+        }
+        .case-item, .relationship-item {
+            background-color: #f5f5f7;
+            border: 1px solid #d2d2d7;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Law Case Research Tool - Admin</h1>
+        <a href="user.html">View User Interface</a>
+        <form id="caseForm">
+            <h2>Add New Case</h2>
+            <label for="title">Judgement Title:</label>
+            <input type="text" id="title" required>
+            
+            <label for="year">Judgement Year:</label>
+            <input type="number" id="year" required>
+            
+            <label for="summary">Summary:</label>
+            <textarea id="summary" required></textarea>
+            
+            <label for="lastUpdated">Last Updated Year:</label>
+            <input type="number" id="lastUpdated" required>
+            
+            <button type="submit">Add Case</button>
+        </form>
+
+        <form id="relationshipForm">
+            <h2>Add Case Relationship</h2>
+            <label for="sourceCase">Source Case:</label>
+            <select id="sourceCase" required></select>
+
+            <label for="targetCase">Target Case:</label>
+            <select id="targetCase" required></select>
+
+            <label for="relationshipType">Relationship Type:</label>
+            <select id="relationshipType" required>
+                <option value="Affirmation">Affirmation</option>
+                <option value="Rejection">Rejection</option>
+                <option value="Distinguishment">Distinguishment</option>
+                <option value="Overruling">Overruling</option>
+                <option value="Modification">Modification</option>
+                <option value="Clarification">Clarification</option>
+                <option value="Contraction">Contraction</option>
+                <option value="Application">Application</option>
+                <option value="Endorsement">Endorsement</option>
+                <option value="Reversal">Reversal</option>
+            </select>
+
+            <button type="submit">Add Relationship</button>
+        </form>
+
+        <div id="caseList"></div>
+        <div id="relationshipList"></div>
+    </div>
+
+    <script>
+        let cases = JSON.parse(localStorage.getItem('lawCases')) || [];
+        let relationships = JSON.parse(localStorage.getItem('caseRelationships')) || [];
+        const caseForm = document.getElementById('caseForm');
+        const relationshipForm = document.getElementById('relationshipForm');
+        const caseList = document.getElementById('caseList');
+        const relationshipList = document.getElementById('relationshipList');
+        const sourceCaseSelect = document.getElementById('sourceCase');
+        const targetCaseSelect = document.getElementById('targetCase');
+
+        function updateCaseList() {
+            caseList.innerHTML = '<h2>Existing Cases</h2>';
+            cases.forEach((c, index) => {
+                caseList.innerHTML += `
+                    <div class="case-item">
+                        <h3>${c.title}</h3>
+                        <p><strong>Year:</strong> ${c.year}</p>
+                        <p><strong>Summary:</strong> ${c.summary}</p>
+                        <p><strong>Last Updated:</strong> ${c.lastUpdated}</p>
+                    </div>
+                `;
+            });
+        }
+
+        function updateRelationshipList() {
+            relationshipList.innerHTML = '<h2>Existing Relationships</h2>';
+            relationships.forEach((r, index) => {
+                const sourceCase = cases.find(c => c.id === r.source);
+                const targetCase = cases.find(c => c.id === r.target);
+                relationshipList.innerHTML += `
+                    <div class="relationship-item">
+                        <p><strong>Source:</strong> ${sourceCase ? sourceCase.title : 'Unknown'}</p>
+                        <p><strong>Target:</strong> ${targetCase ? targetCase.title : 'Unknown'}</p>
+                        <p><strong>Type:</strong> ${r.type}</p>
+                    </div>
+                `;
+            });
+        }
+
+        function updateCaseSelects() {
+            sourceCaseSelect.innerHTML = '';
+            targetCaseSelect.innerHTML = '';
+            cases.forEach(c => {
+                sourceCaseSelect.innerHTML += `<option value="${c.id}">${c.title}</option>`;
+                targetCaseSelect.innerHTML += `<option value="${c.id}">${c.title}</option>`;
+            });
+        }
+
+        caseForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newCase = {
+                id: Date.now().toString(),
+                title: document.getElementById('title').value,
+                year: parseInt(document.getElementById('year').value),
+                summary: document.getElementById('summary').value,
+                lastUpdated: parseInt(document.getElementById('lastUpdated').value)
+            };
+            cases.push(newCase);
+            localStorage.setItem('lawCases', JSON.stringify(cases));
+            updateCaseList();
+            updateCaseSelects();
+            caseForm.reset();
+        });
+
+        relationshipForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newRelationship = {
+                source: document.getElementById('sourceCase').value,
+                target: document.getElementById('targetCase').value,
+                type: document.getElementById('relationshipType').value
+            };
+            relationships.push(newRelationship);
+            localStorage.setItem('caseRelationships', JSON.stringify(relationships));
+            updateRelationshipList();
+            relationshipForm.reset();
+        });
+
+        updateCaseList();
+        updateRelationshipList();
+        updateCaseSelects();
+    </script>
+</body>
+</html>
