@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Law Case Research Tool - User</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 18px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1d1d1f;
+        }
+        #infographic {
+            width: 100%;
+            height: 600px;
+            position: relative;
+            border: 1px solid #d2d2d7;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            padding-bottom: 50px;
+            overflow: hidden;
+        }
+        .case-point {
+            width: 12px;
+            height: 12px;
+            background-color: #0071e3;
+            border-radius: 50%;
+            position: absolute;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .case-point:hover {
+            transform: scale(1.5);
+        }
+        #timeline {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            border-top: 1px solid #d2d2d7;
+            background-color: #f5f5f7;
+        }
+        .timeline-mark {
+            position: absolute;
+            bottom: 0;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 12px;
+            color: #86868b;
+        }
+        .timeline-mark::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            height: 5px;
+            border-left: 1px solid #86868b;
+        }
+        #caseDetails {
+            padding: 20px;
+            border: 1px solid #d2d2d7;
+            border-radius: 12px;
+            background-color: #f5f5f7;
+        }
+        .relationship-arrow {
+            position: absolute;
+            pointer-events: none;
+        }
+        .arrow-head {
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            position: absolute;
+            right: -5px;
+            top: -5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Law Case Research Tool - User</h1>
+        
+        <div id="infographic">
+            <div id="timeline"></div>
+        </div>
+        <div id="caseDetails"></div>
+    </div>
+
+    <script>
+        let cases = JSON.parse(localStorage.getItem('lawCases')) || [];
+        let relationships = JSON.parse(localStorage.getItem('caseRelationships')) || [];
+        const infographic = document.getElementById('infographic');
+        const timeline = document.getElementById('timeline');
+        const caseDetails = document.getElementById('caseDetails');
+
+        const relationshipColors = {
+            'Affirmation': '#4CAF50',
+            'Rejection': '#F44336',
+            'Distinguishment': '#9C27B0',
+            'Overruling': '#FF9800',
+            'Modification': '#2196F3',
+            'Clarification': '#FFEB3B',
+            'Contraction': '#795548',
+            'Application': '#00BCD4',
+            'Endorsement': '#8BC34A',
+            'Reversal': '#E91E63'
+        };
+
+        function updateInfographic() {
+            infographic.innerHTML = '<div id="timeline"></div>';
+            if (cases.length === 0) {
+                infographic.innerHTML += '<p>No cases available.</p>';
+                return;
+            }
+            const years = cases.map(c => c.year);
+            let minYear = Math.min(...years);
+            let maxYear = Math.max(...years);
+
+            minYear = Math.floor(minYear / 10) * 10;
+            maxYear = Math.ceil(maxYear / 10) * 10;
+
+            const width = infographic.offsetWidth;
+            const height = infographic.offsetHeight - 50;
+
+            const casePositions = {};
+
+            cases.forEach((c) => {
+                const x = ((c.year - minYear) / (maxYear - minYear)) * width;
+                const y = Math.random() * (height - 20) + 10;
+                const point = document.createElement('div');
+                point.className = 'case-point';
+                point.style.left = `${x}px`;
+                point.style.top = `${y}px`;
+                point.title = c.title;
+                point.addEventListener('click', () => showCaseDetails(c));
+                infographic.appendChild(point);
+                casePositions[c.id] = { x, y };
+            });
+
+            // Add timeline
+            const timeline = document.getElementById('timeline');
+            timeline.innerHTML = '';
+            const step = Math.ceil((maxYear - minYear) / 10);
+            for (let year = minYear; year <= maxYear; year += step) {
+                const mark = document.createElement('div');
+                mark.className = 'timeline-mark';
+                mark.style.left = `${((year - minYear) / (maxYear - minYear)) * 100}%`;
+                mark.textContent = year;
+                timeline.appendChild(mark);
+            }
+
+            // Add relationship arrows
+            relationships.forEach((r) => {
+                const source = casePositions[r.source];
+                const target = casePositions[r.target];
+                if (source && target) {
+                    drawArrow(source, target, r.type);
+                }
+            });
+        }
+
+        function drawArrow(source, target, type) {
+            const arrow = document.createElement('div');
+            arrow.className = 'relationship-arrow';
+            const angle = Math.atan2(target.y - source.y, target.x - source.x);
+            const length = Math.sqrt(Math.pow(target.x - source.x, 2) + Math.pow(target.y - source.y, 2));
+            arrow.style.width = `${length}px`;
+            arrow.style.left = `${source.x}px`;
+            arrow.style.top = `${source.y}px`;
+            arrow.style.transform = `rotate(${angle}rad)`;
+            arrow.style.transformOrigin = '0 0';
+            arrow.style.borderTop = `2px solid ${relationshipColors[type]}`;
+            arrow.title = type;
+
+            const arrowHead = document.createElement('div');
+            arrowHead.className = 'arrow-head';
+            arrowHead.style.borderTop = `10px solid ${relationshipColors[type]}`;
+            arrow.appendChild(arrowHead);
+ 
+            infographic.appendChild(arrow);
+        }
+
+        function showCaseDetails(c) {
+            caseDetails.innerHTML = `
+                <h3>${c.title}</h3>
+                <p><strong>Citation:</strong> ${c.citation}</p>
+                        <p><strong>Court:</strong> ${c.court}</p>
+                        <p><strong>Year:</strong> ${c.year}</p>
+                        <p><strong>Judges:</strong> ${c.judges}</p>
+                        <p><strong>Summary:</strong> ${c.summary}</p>
+                        <p><strong>Principles:</strong> ${c.principles}</p>
+                        <p><strong>Last Updated:</strong> ${c.lastUpdated}</p>
+            `;
+        }
+
+        updateInfographic();
+    </script>
+</body>
+</html>
